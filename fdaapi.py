@@ -34,6 +34,7 @@ def check_rate_limit():
     daily_request_count += 1
     return True
 
+@st.cache_data(ttl=3600)
 def get_api_data(field, limit=1000):
     if not check_rate_limit():
         return []
@@ -58,6 +59,31 @@ def get_api_data(field, limit=1000):
     
     return [item['term'] for item in data['results']]
 
+@st.cache_data(ttl=3600)
+def get_device_types_for_modality(modality):
+    if not check_rate_limit():
+        return []
+
+    url = "https://api.fda.gov/device/event.json"
+    params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
+        "search": f"device.generic_name:'{modality}'",
+        "count": "device.device_class.exact",
+        "limit": 1000
+    }
+
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return []
+    
+    data = response.json()
+    if 'results' not in data:
+        return []
+    
+    return [item['term'] for item in data['results']]
+
 def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
         return {}
@@ -71,16 +97,25 @@ def get_device_events(modality, device_type, limit=10):
     }
 
     response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return {}
+    
     return response.json()
 
 st.title("FDA Device Adverse Events")
 
-# Fetch options for dropdowns
+# Fetch and cache modalities
 modalities = get_api_data("device.generic_name.exact")
-device_types = get_api_data("device.device_class")
 
-# Create dropdowns
+# Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
+
+# Fetch device types for the selected modality
+device_types = get_device_types_for_modality(selected_modality)
+
+# Create device type dropdown
 selected_device_type = st.selectbox("Select device type:", device_types)
 
 limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
@@ -88,7 +123,7 @@ limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=
 if st.button("Get Device Events"):
     if selected_modality and selected_device_type:
         events = get_device_events(selected_modality, selected_device_type, limit)
-        if 'results' in events:
+        if 'results' in events and events['results']:
             data = []
             for event in events['results']:
                 data.append({
@@ -104,6 +139,8 @@ if st.button("Get Device Events"):
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
         else:
-            st.error(f"No events found for the specified modality and device type.")
+            st.warning(f"No events found for the specified modality and device type.")
     else:
         st.warning("Please select both a modality and a device type.")
+
+# ... existing code ...
