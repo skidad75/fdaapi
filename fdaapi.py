@@ -12,7 +12,17 @@ def get_api_data(field, limit=1000):
         'Authorization': '4AeebrN6spDSoz0ReOT9T38uICCFZBEALM6SxKAU'
     }
     response = requests.get(url, headers=headers, params=params)
-    return [item['term'] for item in response.json()['results']]
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return []
+    
+    data = response.json()
+    if 'results' not in data:
+        st.warning(f"No results found for {field}")
+        return []
+    
+    return [item['term'] for item in data['results']]
 
 def get_device_events(search_term, search_type, limit=10):
     url = "https://api.fda.gov/device/event.json"
