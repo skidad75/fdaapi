@@ -84,6 +84,31 @@ def get_device_types_for_modality(modality):
     
     return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
+@st.cache_data(ttl=3600)
+def get_modalities_with_events(limit=10):
+    if not check_rate_limit():
+        return []
+
+    url = "https://api.fda.gov/device/event.json"
+    params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
+        "count": "device.generic_name.exact",
+        "limit": limit
+    }
+    
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return []
+    
+    data = response.json()
+    if 'results' not in data:
+        st.warning("No modalities found with adverse events")
+        return []
+    
+    return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
+
 def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
         return {}
@@ -106,8 +131,8 @@ def get_device_events(modality, device_type, limit=10):
 
 st.title("FDA Device Adverse Events")
 
-# Fetch and cache modalities (limited to 10)
-modalities = get_api_data("device.generic_name.exact")
+# Fetch and cache modalities with adverse events (limited to 10)
+modalities = get_modalities_with_events()
 
 # Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
