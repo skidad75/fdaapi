@@ -122,12 +122,12 @@ if st.button("Get Device Events"):
             for event in events['results']:
                 data.append({
                     "Event ID": event['event_key'],
-                    "Date of Event": event['date_of_event'],
+                    "Date of Event": event.get('date_of_event', 'Not specified'),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                    "Event Type": ', '.join(event['event_type']),
-                    "Manufacturer": event['manufacturer']['name'][0] if event['manufacturer']['name'] else 'Not specified',
-                    "Brand Name": event['device'][0]['brand_name'] if event['device'][0]['brand_name'] else 'Not specified',
-                    "Generic Name": event['device'][0]['generic_name'] if event['device'][0]['generic_name'] else 'Not specified'
+                    "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
+                    "Manufacturer": event.get('manufacturer', {}).get('name', ['Not specified'])[0],
+                    "Brand Name": event.get('device', [{}])[0].get('brand_name', 'Not specified'),
+                    "Generic Name": event.get('device', [{}])[0].get('generic_name', 'Not specified')
                 })
             
             df = pd.DataFrame(data)
