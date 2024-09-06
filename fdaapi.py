@@ -84,13 +84,6 @@ def get_device_types_for_modality(modality):
     
     return [item['term'] for item in data['results']]
 
-@st.cache_data(ttl=3600)
-def get_all_device_types_for_modalities(modalities):
-    all_device_types = {}
-    for modality in modalities:
-        all_device_types[modality] = get_device_types_for_modality(modality)
-    return all_device_types
-
 def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
         return {}
@@ -116,41 +109,41 @@ st.title("FDA Device Adverse Events")
 # Fetch and cache modalities
 modalities = get_api_data("device.generic_name.exact")
 
-# Fetch and cache all device types for all modalities
-all_device_types = get_all_device_types_for_modalities(modalities)
-
 # Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
 
 # Get device types for the selected modality
-device_types = all_device_types.get(selected_modality, [])
+if selected_modality:
+    device_types = get_device_types_for_modality(selected_modality)
+    
+    # Create device type dropdown
+    selected_device_type = st.selectbox("Select device type:", device_types)
 
-# Create device type dropdown
-selected_device_type = st.selectbox("Select device type:", device_types)
+    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
-limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
-
-if st.button("Get Device Events"):
-    if selected_modality and selected_device_type:
-        events = get_device_events(selected_modality, selected_device_type, limit)
-        if 'results' in events and events['results']:
-            data = []
-            for event in events['results']:
-                data.append({
-                    "Event ID": event['event_key'],
-                    "Date of Event": event['date_of_event'],
-                    "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                    "Event Type": ', '.join(event['event_type']),
-                    "Manufacturer": event['manufacturer']['name'][0] if event['manufacturer']['name'] else 'Not specified',
-                    "Brand Name": event['device'][0]['brand_name'] if event['device'][0]['brand_name'] else 'Not specified',
-                    "Generic Name": event['device'][0]['generic_name'] if event['device'][0]['generic_name'] else 'Not specified'
-                })
-            
-            df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
+    if st.button("Get Device Events"):
+        if selected_modality and selected_device_type:
+            events = get_device_events(selected_modality, selected_device_type, limit)
+            if 'results' in events and events['results']:
+                data = []
+                for event in events['results']:
+                    data.append({
+                        "Event ID": event['event_key'],
+                        "Date of Event": event['date_of_event'],
+                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
+                        "Event Type": ', '.join(event['event_type']),
+                        "Manufacturer": event['manufacturer']['name'][0] if event['manufacturer']['name'] else 'Not specified',
+                        "Brand Name": event['device'][0]['brand_name'] if event['device'][0]['brand_name'] else 'Not specified',
+                        "Generic Name": event['device'][0]['generic_name'] if event['device'][0]['generic_name'] else 'Not specified'
+                    })
+                
+                df = pd.DataFrame(data)
+                st.dataframe(df, use_container_width=True)
+            else:
+                st.warning(f"No events found for the specified modality and device type.")
         else:
-            st.warning(f"No events found for the specified modality and device type.")
-    else:
-        st.warning("Please select both a modality and a device type.")
+            st.warning("Please select both a modality and a device type.")
+else:
+    st.warning("Please select a modality.")
 
 # ... existing code ...
