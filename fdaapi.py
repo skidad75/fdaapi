@@ -33,15 +33,12 @@ def get_device_events(search_term, search_type, limit=10):
     }
     
     params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
         "search": f"{search_mapping[search_type]}:'{search_term}'",
         "limit": limit
     }
-    
-    headers = {
-        'Authorization': '4AeebrN6spDSoz0ReOT9T38uICCFZBEALM6SxKAU'
-    }
 
-    response = requests.get(url, headers=headers, params=params)
+    response = requests.get(url, params=params)
     return response.json()
 
 st.title("FDA Device Adverse Events")
