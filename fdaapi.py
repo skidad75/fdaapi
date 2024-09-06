@@ -60,31 +60,6 @@ def get_api_data(field, limit=10):
     return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
 @st.cache_data(ttl=3600)
-def get_device_types_for_modality(modality):
-    if not check_rate_limit():
-        return []
-
-    url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": f"device.generic_name:'{modality}'",
-        "count": "device.device_class.exact",
-        "limit": 10  # Limit to 10 results
-    }
-
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        st.error(f"API request failed with status code {response.status_code}")
-        return []
-    
-    data = response.json()
-    if 'results' not in data:
-        return []
-    
-    return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
-
-@st.cache_data(ttl=3600)
 def get_modalities_with_events(limit=10):
     if not check_rate_limit():
         return []
@@ -109,7 +84,7 @@ def get_modalities_with_events(limit=10):
     
     return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
-def get_device_events(modality, device_type, limit=10):
+def get_device_events(modality, limit=10):
     if not check_rate_limit():
         return {}
 
@@ -117,7 +92,7 @@ def get_device_events(modality, device_type, limit=10):
     
     params = {
         "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": f"device.generic_name:'{modality}' AND device.device_class:'{device_type}'",
+        "search": f"device.generic_name:'{modality}'",
         "limit": limit
     }
 
@@ -137,38 +112,29 @@ modalities = get_modalities_with_events()
 # Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
 
-# Get device types for the selected modality (limited to 10)
-if selected_modality:
-    device_types = get_device_types_for_modality(selected_modality)
-    
-    # Create device type dropdown
-    selected_device_type = st.selectbox("Select device type:", device_types)
+limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
-    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
-
-    if st.button("Get Device Events"):
-        if selected_modality and selected_device_type:
-            events = get_device_events(selected_modality, selected_device_type, limit)
-            if 'results' in events and events['results']:
-                data = []
-                for event in events['results']:
-                    data.append({
-                        "Event ID": event['event_key'],
-                        "Date of Event": event['date_of_event'],
-                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                        "Event Type": ', '.join(event['event_type']),
-                        "Manufacturer": event['manufacturer']['name'][0] if event['manufacturer']['name'] else 'Not specified',
-                        "Brand Name": event['device'][0]['brand_name'] if event['device'][0]['brand_name'] else 'Not specified',
-                        "Generic Name": event['device'][0]['generic_name'] if event['device'][0]['generic_name'] else 'Not specified'
-                    })
-                
-                df = pd.DataFrame(data)
-                st.dataframe(df, use_container_width=True)
-            else:
-                st.warning(f"No events found for the specified modality and device type.")
+if st.button("Get Device Events"):
+    if selected_modality:
+        events = get_device_events(selected_modality, limit)
+        if 'results' in events and events['results']:
+            data = []
+            for event in events['results']:
+                data.append({
+                    "Event ID": event['event_key'],
+                    "Date of Event": event['date_of_event'],
+                    "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
+                    "Event Type": ', '.join(event['event_type']),
+                    "Manufacturer": event['manufacturer']['name'][0] if event['manufacturer']['name'] else 'Not specified',
+                    "Brand Name": event['device'][0]['brand_name'] if event['device'][0]['brand_name'] else 'Not specified',
+                    "Generic Name": event['device'][0]['generic_name'] if event['device'][0]['generic_name'] else 'Not specified'
+                })
+            
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True)
         else:
-            st.warning("Please select both a modality and a device type.")
-else:
-    st.warning("Please select a modality.")
+            st.warning(f"No events found for the specified modality.")
+    else:
+        st.warning("Please select a modality.")
 
 # ... existing code ...
