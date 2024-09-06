@@ -2,13 +2,25 @@ import streamlit as st
 import requests
 import pandas as pd
 
+def get_api_data(field, limit=1000):
+    url = "https://api.fda.gov/device/event.json"
+    params = {
+        "count": field,
+        "limit": limit
+    }
+    headers = {
+        'Authorization': '4AeebrN6spDSoz0ReOT9T38uICCFZBEALM6SxKAU'
+    }
+    response = requests.get(url, headers=headers, params=params)
+    return [item['term'] for item in response.json()['results']]
+
 def get_device_events(search_term, search_type, limit=10):
     url = "https://api.fda.gov/device/event.json"
     
     search_mapping = {
         "Manufacturer": "manufacturer.name",
         "Model": "device.brand_name",
-        "Device Type": "device.generic_name"
+        "Modality": "device.generic_name"
     }
     
     params = {
@@ -25,13 +37,31 @@ def get_device_events(search_term, search_type, limit=10):
 
 st.title("FDA Device Adverse Events")
 
-search_type = st.selectbox("Search by:", ["Manufacturer", "Model", "Device Type"])
-search_term = st.text_input(f"Enter {search_type.lower()}:")
+# Fetch options for dropdowns
+manufacturers = get_api_data("manufacturer.name.exact")
+models = get_api_data("device.brand_name.exact")
+modalities = get_api_data("device.generic_name.exact")
+
+# Create dropdowns
+search_type = st.selectbox("Search by:", ["Manufacturer", "Model", "Modality"])
+
+# Populate the list of options based on the selected search type
+if search_type == "Manufacturer":
+    search_term = st.selectbox("Select manufacturer:", manufacturers)
+elif search_type == "Model":
+    search_term = st.selectbox("Select model:", models)
+else:
+    search_term = st.selectbox("Select modality:", modalities)
+
+# Add device type selection
+device_types = get_api_data("device.device_class")
+selected_device_type = st.selectbox("Select device type:", device_types)
+
 limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
 if st.button("Get Device Events"):
-    if search_term:
-        events = get_device_events(search_term, search_type, limit)
+    if search_term and selected_device_type:
+        events = get_device_events(f"{search_term} AND device.device_class:{selected_device_type}", search_type, limit)
         if 'results' in events:
             data = []
             for event in events['results']:
@@ -50,4 +80,4 @@ if st.button("Get Device Events"):
         else:
             st.error(f"No events found for the specified {search_type.lower()}.")
     else:
-        st.warning(f"Please enter a {search_type.lower()}.")    
+        st.warning(f"Please select both a {search_type.lower()} and a device type.")
