@@ -58,21 +58,15 @@ def get_api_data(field, limit=1000):
     
     return [item['term'] for item in data['results']]
 
-def get_device_events(search_term, search_type, limit=10):
+def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
         return {}
 
     url = "https://api.fda.gov/device/event.json"
     
-    search_mapping = {
-        "Manufacturer": "manufacturer.name",
-        "Model": "device.brand_name",
-        "Modality": "device.generic_name"
-    }
-    
     params = {
         "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": f"{search_mapping[search_type]}:'{search_term}'",
+        "search": f"device.generic_name:'{modality}' AND device.device_class:'{device_type}'",
         "limit": limit
     }
 
@@ -82,30 +76,18 @@ def get_device_events(search_term, search_type, limit=10):
 st.title("FDA Device Adverse Events")
 
 # Fetch options for dropdowns
-manufacturers = get_api_data("manufacturer.name.exact")
-models = get_api_data("device.brand_name.exact")
 modalities = get_api_data("device.generic_name.exact")
+device_types = get_api_data("device.device_class")
 
 # Create dropdowns
-search_type = st.selectbox("Search by:", ["Manufacturer", "Model", "Modality"])
-
-# Populate the list of options based on the selected search type
-if search_type == "Manufacturer":
-    search_term = st.selectbox("Select manufacturer:", manufacturers)
-elif search_type == "Model":
-    search_term = st.selectbox("Select model:", models)
-else:
-    search_term = st.selectbox("Select modality:", modalities)
-
-# Add device type selection
-device_types = get_api_data("device.device_class")
+selected_modality = st.selectbox("Select modality:", modalities)
 selected_device_type = st.selectbox("Select device type:", device_types)
 
 limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
 if st.button("Get Device Events"):
-    if search_term and selected_device_type:
-        events = get_device_events(f"{search_term} AND device.device_class:{selected_device_type}", search_type, limit)
+    if selected_modality and selected_device_type:
+        events = get_device_events(selected_modality, selected_device_type, limit)
         if 'results' in events:
             data = []
             for event in events['results']:
@@ -122,6 +104,6 @@ if st.button("Get Device Events"):
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
         else:
-            st.error(f"No events found for the specified {search_type.lower()}.")
+            st.error(f"No events found for the specified modality and device type.")
     else:
-        st.warning(f"Please select both a {search_type.lower()} and a device type.")
+        st.warning("Please select both a modality and a device type.")
