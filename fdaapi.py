@@ -1,8 +1,43 @@
 import streamlit as st
 import requests
 import pandas as pd
+import time
+from datetime import datetime, timedelta
+
+# Global variables for rate limiting
+REQUESTS_PER_MINUTE = 240
+REQUESTS_PER_DAY = 120000
+last_request_time = time.time()
+daily_request_count = 0
+last_reset_date = datetime.now().date()
+
+def check_rate_limit():
+    global last_request_time, daily_request_count, last_reset_date
+    current_time = time.time()
+    current_date = datetime.now().date()
+
+    # Reset daily count if it's a new day
+    if current_date > last_reset_date:
+        daily_request_count = 0
+        last_reset_date = current_date
+
+    # Check if we've exceeded daily limit
+    if daily_request_count >= REQUESTS_PER_DAY:
+        st.error("Daily API request limit reached. Please try again tomorrow.")
+        return False
+
+    # Ensure we don't exceed requests per minute
+    if current_time - last_request_time < 60 / REQUESTS_PER_MINUTE:
+        time.sleep(60 / REQUESTS_PER_MINUTE - (current_time - last_request_time))
+
+    last_request_time = time.time()
+    daily_request_count += 1
+    return True
 
 def get_api_data(field, limit=1000):
+    if not check_rate_limit():
+        return []
+
     url = "https://api.fda.gov/device/event.json"
     params = {
         "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
@@ -24,6 +59,9 @@ def get_api_data(field, limit=1000):
     return [item['term'] for item in data['results']]
 
 def get_device_events(search_term, search_type, limit=10):
+    if not check_rate_limit():
+        return {}
+
     url = "https://api.fda.gov/device/event.json"
     
     search_mapping = {
