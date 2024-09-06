@@ -35,7 +35,7 @@ def check_rate_limit():
     return True
 
 @st.cache_data(ttl=3600)
-def get_api_data(field, limit=1000):
+def get_api_data(field, limit=10):
     if not check_rate_limit():
         return []
 
@@ -57,7 +57,7 @@ def get_api_data(field, limit=1000):
         st.warning(f"No results found for {field}")
         return []
     
-    return [item['term'] for item in data['results']]
+    return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
 @st.cache_data(ttl=3600)
 def get_device_types_for_modality(modality):
@@ -69,7 +69,7 @@ def get_device_types_for_modality(modality):
         "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
         "search": f"device.generic_name:'{modality}'",
         "count": "device.device_class.exact",
-        "limit": 1000
+        "limit": 10  # Limit to 10 results
     }
 
     response = requests.get(url, params=params)
@@ -82,7 +82,7 @@ def get_device_types_for_modality(modality):
     if 'results' not in data:
         return []
     
-    return [item['term'] for item in data['results']]
+    return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
 def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
@@ -106,13 +106,13 @@ def get_device_events(modality, device_type, limit=10):
 
 st.title("FDA Device Adverse Events")
 
-# Fetch and cache modalities
+# Fetch and cache modalities (limited to 10)
 modalities = get_api_data("device.generic_name.exact")
 
 # Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
 
-# Get device types for the selected modality
+# Get device types for the selected modality (limited to 10)
 if selected_modality:
     device_types = get_device_types_for_modality(selected_modality)
     
