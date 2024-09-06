@@ -5,13 +5,12 @@ import pandas as pd
 def get_api_data(field, limit=1000):
     url = "https://api.fda.gov/device/event.json"
     params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
         "count": field,
         "limit": limit
     }
-    headers = {
-        'Authorization': '4AeebrN6spDSoz0ReOT9T38uICCFZBEALM6SxKAU'
-    }
-    response = requests.get(url, headers=headers, params=params)
+    
+    response = requests.get(url, params=params)
     
     if response.status_code != 200:
         st.error(f"API request failed with status code {response.status_code}")
