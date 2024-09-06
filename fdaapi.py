@@ -84,6 +84,13 @@ def get_device_types_for_modality(modality):
     
     return [item['term'] for item in data['results']]
 
+@st.cache_data(ttl=3600)
+def get_all_device_types_for_modalities(modalities):
+    all_device_types = {}
+    for modality in modalities:
+        all_device_types[modality] = get_device_types_for_modality(modality)
+    return all_device_types
+
 def get_device_events(modality, device_type, limit=10):
     if not check_rate_limit():
         return {}
@@ -109,11 +116,14 @@ st.title("FDA Device Adverse Events")
 # Fetch and cache modalities
 modalities = get_api_data("device.generic_name.exact")
 
+# Fetch and cache all device types for all modalities
+all_device_types = get_all_device_types_for_modalities(modalities)
+
 # Create modality dropdown
 selected_modality = st.selectbox("Select modality:", modalities)
 
-# Fetch device types for the selected modality
-device_types = get_device_types_for_modality(selected_modality)
+# Get device types for the selected modality
+device_types = all_device_types.get(selected_modality, [])
 
 # Create device type dropdown
 selected_device_type = st.selectbox("Select device type:", device_types)
