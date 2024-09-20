@@ -129,10 +129,54 @@ def get_device_events(modality, limit=10):
     
     return response.json()
 
+@st.cache_data(ttl=3600)
+def get_manufacturer_events(limit=100):
+    if not check_rate_limit():
+        return []
+
+    url = "https://api.fda.gov/device/event.json"
+    params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
+        "count": "device.manufacturer_d_name.exact",
+        "limit": limit
+    }
+    
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return []
+    
+    data = response.json()
+    if 'results' not in data:
+        st.warning("No manufacturers found with adverse events")
+        return []
+    
+    return data['results']
+
+def get_manufacturer_details(manufacturer, limit=100):
+    if not check_rate_limit():
+        return {}
+
+    url = "https://api.fda.gov/device/event.json"
+    params = {
+        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
+        "search": f"device.manufacturer_d_name:'{manufacturer}'",
+        "limit": limit
+    }
+
+    response = requests.get(url, params=params)
+    
+    if response.status_code != 200:
+        st.error(f"API request failed with status code {response.status_code}")
+        return {}
+    
+    return response.json()
+
 st.title("FDA Device Adverse Events")
 
 # Create tabs for different features
-tab1, tab2 = st.tabs(["Modality-specific Events", "High Severity Events"])
+tab1, tab2, tab3 = st.tabs(["Modality-specific Events", "High Severity Events", "Manufacturer and Brand Events"])
 
 with tab1:
     # Fetch and cache modalities with adverse events (increased limit to 100)
@@ -195,7 +239,6 @@ with tab1:
                     else:
                         return 'background-color: #90EE90'
 
-                # Use Styler.map instead of Styler.applymap
                 styled_df = df.style.map(color_severity, subset=['Severity'])
                 
                 st.dataframe(styled_df, use_container_width=True)
@@ -255,6 +298,96 @@ with tab2:
             )
         else:
             st.warning("No high severity events found.")
+
+with tab3:
+    st.header("Manufacturer and Brand Events")
+    
+    # Fetch manufacturers with adverse events
+    manufacturers = get_manufacturer_events()
+    manufacturer_names = [item['term'] for item in manufacturers]
+    
+    # Create manufacturer dropdown with search functionality
+    selected_manufacturer = st.selectbox("Select manufacturer:", manufacturer_names, index=None, placeholder="Search for a manufacturer...")
+    
+    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10, key="manufacturer_limit")
+    
+    # Add severity filter
+    severity_options = ["All", "High", "Medium", "Low"]
+    selected_severity = st.selectbox("Filter by severity:", severity_options, key="manufacturer_severity")
+    
+    if st.button("Get Manufacturer Events"):
+        if selected_manufacturer:
+            with st.spinner("Fetching manufacturer events..."):
+                events = get_manufacturer_details(selected_manufacturer, limit)
+            if 'results' in events and events['results']:
+                data = []
+                modalities = set()
+                for event in events['results']:
+                    # Determine severity based on event type
+                    severity = "Low"
+                    event_types = event.get('event_type', [])
+                    if "Death" in event_types:
+                        severity = "High"
+                    elif "Injury" in event_types or "Malfunction" in event_types:
+                        severity = "Medium"
+
+                    # Safely get brand_name and generic_name
+                    device_info = event.get('device', [{}])[0]
+                    brand_name = device_info.get('brand_name', 'Not specified')
+                    generic_name = device_info.get('generic_name', 'Not specified')
+                    
+                    # Ensure brand_name and generic_name are strings
+                    brand_name = brand_name[0] if isinstance(brand_name, list) else brand_name
+                    generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
+                    
+                    modalities.add(generic_name)
+
+                    data.append({
+                        "Date of Event": event.get('date_of_event', 'Not specified'),
+                        "Brand Name": brand_name,
+                        "Generic Name (Modality)": generic_name,
+                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
+                        "Event Type": ', '.join(event_types),
+                        "Severity": severity
+                    })
+                
+                df = pd.DataFrame(data)
+
+                # Apply severity filter
+                if selected_severity != "All":
+                    df = df[df["Severity"] == selected_severity]
+
+                # Add modality filter
+                modality_options = ["All"] + list(modalities)
+                selected_modality = st.selectbox("Filter by modality:", modality_options)
+                if selected_modality != "All":
+                    df = df[df["Generic Name (Modality)"] == selected_modality]
+
+                # Color-code severity
+                def color_severity(val):
+                    if val == "High":
+                        return 'background-color: #FFCCCB'
+                    elif val == "Medium":
+                        return 'background-color: #FFFFA1'
+                    else:
+                        return 'background-color: #90EE90'
+
+                styled_df = df.style.map(color_severity, subset=['Severity'])
+                
+                st.dataframe(styled_df, use_container_width=True)
+                
+                # Add download button for CSV
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="Download manufacturer events as CSV",
+                    data=csv,
+                    file_name=f"{selected_manufacturer}_events.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.warning(f"No events found for the specified manufacturer.")
+        else:
+            st.warning("Please select a manufacturer.")
 
 # Add footer with API information
 st.markdown("---")
