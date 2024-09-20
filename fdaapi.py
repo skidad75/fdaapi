@@ -311,6 +311,7 @@ with tab2:
                 if selected_modality != "All":
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
+                # Display the DataFrame using AgGrid
                 gb = GridOptionsBuilder.from_dataframe(df)
                 gb.configure_pagination(paginationAutoPageSize=True)
                 gb.configure_side_bar()
@@ -338,8 +339,8 @@ with tab3:
     # Fetch and cache modalities with adverse events (keep limit at 100 for the dropdown)
     modalities = get_modalities_with_events(100)
 
-    # Create modality dropdown with search functionality
-    selected_modality = st.selectbox("Select modality:", modalities, index=None, placeholder="Search for a modality...")
+    # Create modality dropdown
+    selected_modality = st.selectbox("Select modality:", modalities)
 
     # Adjust the limit to respect API constraints
     limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=1000, value=10)
