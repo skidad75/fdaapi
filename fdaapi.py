@@ -121,10 +121,13 @@ def get_device_events(modality, limit=10):
         "limit": limit
     }
 
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        st.error(f"API request failed with status code {response.status_code}")
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        st.error(f"API request failed: {str(e)}")
+        if response.status_code == 500:
+            st.error("The FDA server encountered an internal error. This might be due to temporary issues or maintenance. Please try again later or with a smaller number of events.")
         return {}
     
     return response.json()
@@ -185,87 +188,9 @@ def get_manufacturer_details(manufacturer, limit=100):
 st.title("FDA Device Adverse Events")
 
 # Create tabs for different features
-tab1, tab2, tab3 = st.tabs(["Modality-specific Events", "High Severity Events", "Manufacturer and Brand Events"])
+tab1, tab2, tab3 = st.tabs(["High Severity Events", "Manufacturer and Brand Events", "Modality-specific Events"])
 
 with tab1:
-    # Fetch and cache modalities with adverse events (increased limit to 100)
-    modalities = get_modalities_with_events(100)
-
-    # Create modality dropdown with search functionality
-    selected_modality = st.selectbox("Select modality:", modalities, index=None, placeholder="Search for a modality...")
-
-    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
-
-    # Add severity filter
-    severity_options = ["All", "High", "Medium", "Low"]
-    selected_severity = st.selectbox("Filter by severity:", severity_options)
-
-    if st.button("Get Device Events"):
-        if selected_modality:
-            with st.spinner("Fetching device events..."):
-                events = get_device_events(selected_modality, limit)
-            if 'results' in events and events['results']:
-                data = []
-                for event in events['results']:
-                    # Determine severity based on event type
-                    severity = "Low"
-                    event_types = event.get('event_type', [])
-                    if "Death" in event_types:
-                        severity = "High"
-                    elif "Injury" in event_types or "Malfunction" in event_types:
-                        severity = "Medium"
-
-                    # Safely get brand_name and generic_name
-                    device_info = event.get('device', [{}])[0]
-                    brand_name = device_info.get('brand_name', 'Not specified')
-                    generic_name = device_info.get('generic_name', 'Not specified')
-                    
-                    # Ensure brand_name and generic_name are strings
-                    brand_name = brand_name[0] if isinstance(brand_name, list) else brand_name
-                    generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
-
-                    data.append({
-                        "Date of Event": event.get('date_of_event', 'Not specified'),
-                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                        "Event Type": ', '.join(event_types),
-                        "Severity": severity,
-                        "Brand Name": brand_name,
-                        "Generic Name": generic_name
-                    })
-                
-                df = pd.DataFrame(data)
-
-                # Apply severity filter
-                if selected_severity != "All":
-                    df = df[df["Severity"] == selected_severity]
-
-                # Color-code severity
-                def color_severity(val):
-                    if val == "High":
-                        return 'background-color: #FFCCCB'
-                    elif val == "Medium":
-                        return 'background-color: #FFFFA1'
-                    else:
-                        return 'background-color: #90EE90'
-
-                styled_df = df.style.map(color_severity, subset=['Severity'])
-                
-                st.dataframe(styled_df, use_container_width=True)
-                
-                # Add download button for CSV
-                csv = df.to_csv(index=False)
-                st.download_button(
-                    label="Download data as CSV",
-                    data=csv,
-                    file_name=f"{selected_modality}_events_filtered.csv",
-                    mime="text/csv",
-                )
-            else:
-                st.warning(f"No events found for the specified modality.")
-        else:
-            st.warning("Please select a modality.")
-
-with tab2:
     st.header("High Severity Events Across All Modalities")
     
     limit_high_severity = st.number_input("Number of high severity events to retrieve:", min_value=1, max_value=100, value=10, key="high_severity_limit")
@@ -308,7 +233,7 @@ with tab2:
         else:
             st.warning("No high severity events found.")
 
-with tab3:
+with tab2:
     st.header("Manufacturer and Brand Events")
     
     # Fetch manufacturers with adverse events
@@ -400,6 +325,87 @@ with tab3:
                     st.warning(f"No events found for the specified manufacturer: {selected_manufacturer}")
         else:
             st.warning("Please select a manufacturer.")
+
+with tab3:
+    st.header("Modality-specific Events")
+
+    # Fetch and cache modalities with adverse events (keep limit at 100 for the dropdown)
+    modalities = get_modalities_with_events(100)
+
+    # Create modality dropdown with search functionality
+    selected_modality = st.selectbox("Select modality:", modalities, index=None, placeholder="Search for a modality...")
+
+    # Adjust the limit to a lower default value and smaller range
+    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=50, value=5)
+
+    # Add severity filter
+    severity_options = ["All", "High", "Medium", "Low"]
+    selected_severity = st.selectbox("Filter by severity:", severity_options)
+
+    if st.button("Get Device Events"):
+        if selected_modality:
+            with st.spinner("Fetching device events..."):
+                events = get_device_events(selected_modality, limit)
+            if 'results' in events and events['results']:
+                data = []
+                for event in events['results']:
+                    # Determine severity based on event type
+                    severity = "Low"
+                    event_types = event.get('event_type', [])
+                    if "Death" in event_types:
+                        severity = "High"
+                    elif "Injury" in event_types or "Malfunction" in event_types:
+                        severity = "Medium"
+
+                    # Safely get brand_name and generic_name
+                    device_info = event.get('device', [{}])[0]
+                    brand_name = device_info.get('brand_name', 'Not specified')
+                    generic_name = device_info.get('generic_name', 'Not specified')
+                    
+                    # Ensure brand_name and generic_name are strings
+                    brand_name = brand_name[0] if isinstance(brand_name, list) else brand_name
+                    generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
+
+                    data.append({
+                        "Date of Event": event.get('date_of_event', 'Not specified'),
+                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
+                        "Event Type": ', '.join(event_types),
+                        "Severity": severity,
+                        "Brand Name": brand_name,
+                        "Generic Name": generic_name
+                    })
+                
+                df = pd.DataFrame(data)
+
+                # Apply severity filter
+                if selected_severity != "All":
+                    df = df[df["Severity"] == selected_severity]
+
+                # Color-code severity
+                def color_severity(val):
+                    if val == "High":
+                        return 'background-color: #FFCCCB'
+                    elif val == "Medium":
+                        return 'background-color: #FFFFA1'
+                    else:
+                        return 'background-color: #90EE90'
+
+                styled_df = df.style.map(color_severity, subset=['Severity'])
+                
+                st.dataframe(styled_df, use_container_width=True)
+                
+                # Add download button for CSV
+                csv = df.to_csv(index=False)
+                st.download_button(
+                    label="Download data as CSV",
+                    data=csv,
+                    file_name=f"{selected_modality}_events_filtered.csv",
+                    mime="text/csv",
+                )
+            else:
+                st.warning(f"No events found for the specified modality.")
+        else:
+            st.warning("Please select a modality.")
 
 # Add footer with API information
 st.markdown("---")
