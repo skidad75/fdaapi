@@ -34,3 +34,15 @@ This Streamlit application provides an interactive interface to explore and anal
 ## Usage
 
 Run the Streamlit app:
+
+## Support the Project
+
+If you find this tool useful and would like to support its development and maintenance, consider buying me a coffee!
+
+[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/skidad75)
+
+Developed with ❤️ by [Ryan](https://github.com/skidad75) | [Buy Me a Coffee](https://buymeacoffee.com/skidad75)
+
+## Disclaimer
+
+This application is for informational purposes only. It is not affiliated with or endorsed by the FDA. Always consult with healthcare professionals for medical advice.
