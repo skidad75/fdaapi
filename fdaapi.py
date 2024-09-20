@@ -225,7 +225,7 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
+            st.write(df)
             
             # Add download button for CSV
             csv = df.to_csv(index=False)
@@ -304,18 +304,8 @@ with tab2:
                 if selected_modality != "All":
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
-                # Color-code severity
-                def color_severity(val):
-                    if val == "High":
-                        return 'background-color: #FFCCCB'
-                    elif val == "Medium":
-                        return 'background-color: #FFFFA1'
-                    else:
-                        return 'background-color: #90EE90'
-
-                styled_df = df.style.map(color_severity, subset=['Severity'])
-                
-                st.dataframe(styled_df, use_container_width=True)
+                # Display the DataFrame
+                st.write(df)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
@@ -385,18 +375,8 @@ with tab3:
                 if selected_severity != "All":
                     df = df[df["Severity"] == selected_severity]
 
-                # Color-code severity
-                def color_severity(val):
-                    if val == "High":
-                        return 'background-color: #FFCCCB'
-                    elif val == "Medium":
-                        return 'background-color: #FFFFA1'
-                    else:
-                        return 'background-color: #90EE90'
-
-                styled_df = df.style.map(color_severity, subset=['Severity'])
-                
-                st.dataframe(styled_df, use_container_width=True)
+                # Display the DataFrame
+                st.write(df)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
