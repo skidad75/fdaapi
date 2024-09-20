@@ -4,6 +4,8 @@
 
 This Streamlit application provides an interactive interface to explore and analyze FDA device adverse events data. It allows users to investigate high-severity events across all medical devices, examine events by manufacturer and brand, and explore events specific to particular medical device modalities.
 
+🚀 [Try the Live Demo](https://fda-devices.streamlit.app/)
+
 ## Features
 
 1. **High Severity Events**: View and analyze adverse events that resulted in death or serious injury across all medical devices.
