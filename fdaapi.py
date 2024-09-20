@@ -167,6 +167,15 @@ with tab1:
                     manufacturer = event.get('manufacturer', [{}])[0].get('name', 'Not specified')
                     manufacturers.add(manufacturer)
 
+                    # Safely get brand_name and generic_name
+                    device_info = event.get('device', [{}])[0]
+                    brand_name = device_info.get('brand_name', 'Not specified')
+                    generic_name = device_info.get('generic_name', 'Not specified')
+                    
+                    # Ensure brand_name and generic_name are strings
+                    brand_name = brand_name[0] if isinstance(brand_name, list) else brand_name
+                    generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
+
                     data.append({
                         "Event ID": event['event_key'],
                         "Date of Event": event.get('date_of_event', 'Not specified'),
@@ -174,8 +183,8 @@ with tab1:
                         "Event Type": ', '.join(event_types),
                         "Severity": severity,
                         "Manufacturer": manufacturer,
-                        "Brand Name": event.get('device', [{}])[0].get('brand_name', ['Not specified'])[0],
-                        "Generic Name": event.get('device', [{}])[0].get('generic_name', ['Not specified'])[0]
+                        "Brand Name": brand_name,
+                        "Generic Name": generic_name
                     })
                 
                 df = pd.DataFrame(data)
@@ -231,14 +240,23 @@ with tab2:
                 # Extract manufacturer name correctly
                 manufacturer = event.get('manufacturer', [{}])[0].get('name', 'Not specified')
                 
+                # Safely get brand_name and generic_name
+                device_info = event.get('device', [{}])[0]
+                brand_name = device_info.get('brand_name', 'Not specified')
+                generic_name = device_info.get('generic_name', 'Not specified')
+                
+                # Ensure brand_name and generic_name are strings
+                brand_name = brand_name[0] if isinstance(brand_name, list) else brand_name
+                generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
+
                 data.append({
                     "Event ID": event['event_key'],
                     "Date of Event": event.get('date_of_event', 'Not specified'),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                     "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
                     "Manufacturer": manufacturer,
-                    "Brand Name": event.get('device', [{}])[0].get('brand_name', ['Not specified'])[0],
-                    "Generic Name": event.get('device', [{}])[0].get('generic_name', ['Not specified'])[0]
+                    "Brand Name": brand_name,
+                    "Generic Name": generic_name
                 })
             
             df = pd.DataFrame(data)
