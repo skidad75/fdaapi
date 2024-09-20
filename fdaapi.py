@@ -185,13 +185,10 @@ def get_manufacturer_details(manufacturer, limit=100):
         st.error("Failed to parse the API response as JSON.")
         return {}
 
-def parse_date(date_string):
-    if pd.isna(date_string):
+def safe_string(value):
+    if pd.isna(value):
         return ''
-    try:
-        return pd.to_datetime(date_string).strftime('%Y-%m-%d %H:%M:%S')
-    except ValueError:
-        return ''
+    return str(value)
 
 st.title("FDA Device Adverse Events")
 
@@ -220,11 +217,11 @@ with tab1:
                 generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                 data.append({
-                    "Date of Event": parse_date(event.get('date_of_event', '')),
-                    "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                    "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
-                    "Brand Name": brand_name,
-                    "Generic Name": generic_name
+                    "Date of Event": safe_string(event.get('date_of_event', 'Not specified')),
+                    "Product Problems": safe_string(', '.join(event.get('product_problems', ['Not specified']))),
+                    "Event Type": safe_string(', '.join(event.get('event_type', ['Not specified']))),
+                    "Brand Name": safe_string(brand_name),
+                    "Generic Name": safe_string(generic_name)
                 })
             
             df = pd.DataFrame(data)
@@ -285,12 +282,12 @@ with tab2:
                     modalities.add(generic_name)
 
                     data.append({
-                        "Date of Event": parse_date(event.get('date_of_event', '')),
-                        "Brand Name": brand_name,
-                        "Generic Name (Modality)": generic_name,
-                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                        "Event Type": ', '.join(event_types),
-                        "Severity": severity
+                        "Date of Event": safe_string(event.get('date_of_event', 'Not specified')),
+                        "Brand Name": safe_string(brand_name),
+                        "Generic Name (Modality)": safe_string(generic_name),
+                        "Product Problems": safe_string(', '.join(event.get('product_problems', ['Not specified']))),
+                        "Event Type": safe_string(', '.join(event_types)),
+                        "Severity": safe_string(severity)
                     })
                 
                 df = pd.DataFrame(data)
@@ -374,12 +371,12 @@ with tab3:
                     generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                     data.append({
-                        "Date of Event": parse_date(event.get('date_of_event', '')),
-                        "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                        "Event Type": ', '.join(event_types),
-                        "Severity": severity,
-                        "Brand Name": brand_name,
-                        "Generic Name": generic_name
+                        "Date of Event": safe_string(event.get('date_of_event', 'Not specified')),
+                        "Product Problems": safe_string(', '.join(event.get('product_problems', ['Not specified']))),
+                        "Event Type": safe_string(', '.join(event_types)),
+                        "Severity": safe_string(severity),
+                        "Brand Name": safe_string(brand_name),
+                        "Generic Name": safe_string(generic_name)
                     })
                 
                 df = pd.DataFrame(data)
