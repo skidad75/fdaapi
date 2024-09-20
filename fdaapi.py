@@ -177,12 +177,10 @@ with tab1:
                     generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                     data.append({
-                        "Event ID": event['event_key'],
                         "Date of Event": event.get('date_of_event', 'Not specified'),
                         "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                         "Event Type": ', '.join(event_types),
                         "Severity": severity,
-                        "Manufacturer": manufacturer,
                         "Brand Name": brand_name,
                         "Generic Name": generic_name
                     })
@@ -237,9 +235,6 @@ with tab2:
         if high_severity_events:
             data = []
             for event in high_severity_events:
-                # Extract manufacturer name correctly
-                manufacturer = event.get('manufacturer', [{}])[0].get('name', 'Not specified')
-                
                 # Safely get brand_name and generic_name
                 device_info = event.get('device', [{}])[0]
                 brand_name = device_info.get('brand_name', 'Not specified')
@@ -250,11 +245,9 @@ with tab2:
                 generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                 data.append({
-                    "Event ID": event['event_key'],
                     "Date of Event": event.get('date_of_event', 'Not specified'),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                     "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
-                    "Manufacturer": manufacturer,
                     "Brand Name": brand_name,
                     "Generic Name": generic_name
                 })
