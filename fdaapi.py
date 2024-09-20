@@ -416,3 +416,6 @@ with tab3:
 # Add footer with API information
 st.markdown("---")
 st.markdown("Data provided by the [FDA Adverse Event Reporting System API](https://open.fda.gov/apis/device/event/)")
+
+# Add developer credit and Buy Me a Coffee link
+st.markdown("Developed with ❤️ by [Ryan](https://github.com/skidad75) | [Buy Me a Coffee](https://buymeacoffee.com/skidad75)")
