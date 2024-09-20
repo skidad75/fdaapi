@@ -165,13 +165,22 @@ def get_manufacturer_details(manufacturer, limit=100):
         "limit": limit
     }
 
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        st.error(f"API request failed with status code {response.status_code}")
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # This will raise an exception for HTTP errors
+    except requests.exceptions.RequestException as e:
+        st.error(f"API request failed: {str(e)}")
+        if response.status_code == 500:
+            st.error("The FDA server encountered an internal error. This might be due to temporary issues or maintenance. Please try again later.")
+        elif response.status_code == 400:
+            st.error("The request was invalid. This might be due to an issue with the manufacturer name format.")
         return {}
     
-    return response.json()
+    try:
+        return response.json()
+    except ValueError:
+        st.error("Failed to parse the API response as JSON.")
+        return {}
 
 st.title("FDA Device Adverse Events")
 
@@ -319,7 +328,7 @@ with tab3:
         if selected_manufacturer:
             with st.spinner("Fetching manufacturer events..."):
                 events = get_manufacturer_details(selected_manufacturer, limit)
-            if 'results' in events and events['results']:
+            if events and 'results' in events and events['results']:
                 data = []
                 modalities = set()
                 for event in events['results']:
@@ -385,7 +394,10 @@ with tab3:
                     mime="text/csv",
                 )
             else:
-                st.warning(f"No events found for the specified manufacturer.")
+                if not events:
+                    st.warning("Failed to retrieve events. Please check the error messages above.")
+                else:
+                    st.warning(f"No events found for the specified manufacturer: {selected_manufacturer}")
         else:
             st.warning("Please select a manufacturer.")
 
