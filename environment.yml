@@ -1,18 +1,13 @@
 name: FDAAPI
 channels:
-- anaconda
-- conda-forge
-- defaults
+  - conda-forge
+  - defaults
 dependencies:
-  - python
+  - python=3.9
+  - pip
   - pip:
-    - streamlit
-    - streamlit_extras
-    - openai
-    - llama-index
-    - llama-index-llms-openai
-    - nltk
-    - pypdf
-    - requests
-    - json2html
-    - pandas
+    - streamlit==1.22.0
+    - pandas==1.5.3
+    - requests==2.28.2
+    - plotly==5.14.1
+    - python-dotenv==1.0.0
