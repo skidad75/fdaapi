@@ -153,7 +153,6 @@ with tab1:
                 events = get_device_events(selected_modality, limit)
             if 'results' in events and events['results']:
                 data = []
-                manufacturers = set()
                 for event in events['results']:
                     # Determine severity based on event type
                     severity = "Low"
@@ -162,10 +161,6 @@ with tab1:
                         severity = "High"
                     elif "Injury" in event_types or "Malfunction" in event_types:
                         severity = "Medium"
-
-                    # Extract manufacturer name correctly
-                    manufacturer = event.get('manufacturer', [{}])[0].get('name', 'Not specified')
-                    manufacturers.add(manufacturer)
 
                     # Safely get brand_name and generic_name
                     device_info = event.get('device', [{}])[0]
@@ -187,15 +182,9 @@ with tab1:
                 
                 df = pd.DataFrame(data)
 
-                # Add manufacturer filter
-                manufacturer_options = ["All"] + list(manufacturers)
-                selected_manufacturer = st.selectbox("Filter by manufacturer:", manufacturer_options)
-
-                # Apply filters
+                # Apply severity filter
                 if selected_severity != "All":
                     df = df[df["Severity"] == selected_severity]
-                if selected_manufacturer != "All":
-                    df = df[df["Manufacturer"] == selected_manufacturer]
 
                 # Color-code severity
                 def color_severity(val):
@@ -206,7 +195,8 @@ with tab1:
                     else:
                         return 'background-color: #90EE90'
 
-                styled_df = df.style.applymap(color_severity, subset=['Severity'])
+                # Use Styler.map instead of Styler.applymap
+                styled_df = df.style.map(color_severity, subset=['Severity'])
                 
                 st.dataframe(styled_df, use_container_width=True)
                 
