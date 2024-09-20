@@ -225,7 +225,8 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
-            st.write(df)
+            html = df.to_html(index=False, escape=False)
+            st.markdown(html, unsafe_allow_html=True)
             
             # Add download button for CSV
             csv = df.to_csv(index=False)
@@ -304,8 +305,9 @@ with tab2:
                 if selected_modality != "All":
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
-                # Display the DataFrame
-                st.write(df)
+                # Convert DataFrame to HTML and display
+                html = df.to_html(index=False, escape=False)
+                st.markdown(html, unsafe_allow_html=True)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
@@ -375,8 +377,9 @@ with tab3:
                 if selected_severity != "All":
                     df = df[df["Severity"] == selected_severity]
 
-                # Display the DataFrame
-                st.write(df)
+                # Convert DataFrame to HTML and display
+                html = df.to_html(index=False, escape=False)
+                st.markdown(html, unsafe_allow_html=True)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
