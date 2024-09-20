@@ -118,7 +118,7 @@ def get_device_events(modality, limit=10):
     params = {
         "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
         "search": f"device.generic_name:'{modality}'",
-        "limit": limit
+        "limit": min(limit, 1000)  # Ensure limit doesn't exceed 1000
     }
 
     try:
@@ -335,8 +335,8 @@ with tab3:
     # Create modality dropdown with search functionality
     selected_modality = st.selectbox("Select modality:", modalities, index=None, placeholder="Search for a modality...")
 
-    # Adjust the limit to a lower default value and smaller range
-    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=50, value=5)
+    # Adjust the limit to respect API constraints
+    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=1000, value=10)
 
     # Add severity filter
     severity_options = ["All", "High", "Medium", "Low"]
@@ -346,7 +346,7 @@ with tab3:
         if selected_modality:
             with st.spinner("Fetching device events..."):
                 events = get_device_events(selected_modality, limit)
-            if 'results' in events and events['results']:
+            if events and 'results' in events and events['results']:
                 data = []
                 for event in events['results']:
                     # Determine severity based on event type
@@ -403,7 +403,7 @@ with tab3:
                     mime="text/csv",
                 )
             else:
-                st.warning(f"No events found for the specified modality.")
+                st.warning(f"No events found for the specified modality or an error occurred.")
         else:
             st.warning("Please select a modality.")
 
