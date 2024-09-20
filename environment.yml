@@ -8,7 +8,7 @@ dependencies:
   - numpy=1.23.5
   - pandas=1.5.3
   - pip:
-    - streamlit==1.22.0
+    - streamlit==1.24.0  # or the latest version available
     - requests==2.28.2
     - plotly==5.14.1
     - python-dotenv==1.0.0
