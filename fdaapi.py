@@ -226,8 +226,13 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
-            html = df.to_html(index=False, escape=False)
-            st.markdown(html, unsafe_allow_html=True)
+            gb = GridOptionsBuilder.from_dataframe(df)
+            gb.configure_pagination(paginationAutoPageSize=True)
+            gb.configure_side_bar()
+            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+            gridOptions = gb.build()
+
+            AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
             
             # Add download button for CSV
             csv = df.to_csv(index=False)
@@ -306,9 +311,13 @@ with tab2:
                 if selected_modality != "All":
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
-                # Convert DataFrame to HTML and display
-                html = df.to_html(index=False, escape=False)
-                st.markdown(html, unsafe_allow_html=True)
+                gb = GridOptionsBuilder.from_dataframe(df)
+                gb.configure_pagination(paginationAutoPageSize=True)
+                gb.configure_side_bar()
+                gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+                gridOptions = gb.build()
+
+                AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
@@ -378,9 +387,13 @@ with tab3:
                 if selected_severity != "All":
                     df = df[df["Severity"] == selected_severity]
 
-                # Convert DataFrame to HTML and display
-                html = df.to_html(index=False, escape=False)
-                st.markdown(html, unsafe_allow_html=True)
+                gb = GridOptionsBuilder.from_dataframe(df)
+                gb.configure_pagination(paginationAutoPageSize=True)
+                gb.configure_side_bar()
+                gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
+                gridOptions = gb.build()
+
+                AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
                 
                 # Add download button for CSV
                 csv = df.to_csv(index=False)
