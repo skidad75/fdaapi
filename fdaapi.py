@@ -60,7 +60,7 @@ def get_api_data(field, limit=10):
     return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
 
 @st.cache_data(ttl=3600)
-def get_modalities_with_events(limit=10):
+def get_modalities_with_events(limit=100):
     if not check_rate_limit():
         return []
 
@@ -82,7 +82,7 @@ def get_modalities_with_events(limit=10):
         st.warning("No modalities found with adverse events")
         return []
     
-    return [item['term'] for item in data['results']][:10]  # Limit to first 10 results
+    return [item['term'] for item in data['results']]
 
 def get_device_events(modality, limit=10):
     if not check_rate_limit():
@@ -106,17 +106,18 @@ def get_device_events(modality, limit=10):
 
 st.title("FDA Device Adverse Events")
 
-# Fetch and cache modalities with adverse events (limited to 10)
-modalities = get_modalities_with_events()
+# Fetch and cache modalities with adverse events (increased limit to 100)
+modalities = get_modalities_with_events(100)
 
-# Create modality dropdown
-selected_modality = st.selectbox("Select modality:", modalities)
+# Create modality dropdown with search functionality
+selected_modality = st.selectbox("Select modality:", modalities, index=None, placeholder="Search for a modality...")
 
 limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
 if st.button("Get Device Events"):
     if selected_modality:
-        events = get_device_events(selected_modality, limit)
+        with st.spinner("Fetching device events..."):
+            events = get_device_events(selected_modality, limit)
         if 'results' in events and events['results']:
             data = []
             for event in events['results']:
@@ -132,9 +133,20 @@ if st.button("Get Device Events"):
             
             df = pd.DataFrame(data)
             st.dataframe(df, use_container_width=True)
+            
+            # Add download button for CSV
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="Download data as CSV",
+                data=csv,
+                file_name=f"{selected_modality}_events.csv",
+                mime="text/csv",
+            )
         else:
             st.warning(f"No events found for the specified modality.")
     else:
         st.warning("Please select a modality.")
 
-# ... existing code ...
+# Add footer with API information
+st.markdown("---")
+st.markdown("Data provided by the [FDA Adverse Event Reporting System API](https://open.fda.gov/apis/device/event/)")
