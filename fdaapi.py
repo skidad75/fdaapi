@@ -114,12 +114,17 @@ selected_modality = st.selectbox("Select modality:", modalities, index=None, pla
 
 limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10)
 
+# Add severity filter
+severity_options = ["All", "High", "Medium", "Low"]
+selected_severity = st.selectbox("Filter by severity:", severity_options)
+
 if st.button("Get Device Events"):
     if selected_modality:
         with st.spinner("Fetching device events..."):
             events = get_device_events(selected_modality, limit)
         if 'results' in events and events['results']:
             data = []
+            manufacturers = set()
             for event in events['results']:
                 # Determine severity based on event type
                 severity = "Low"
@@ -129,19 +134,32 @@ if st.button("Get Device Events"):
                 elif "Injury" in event_types or "Malfunction" in event_types:
                     severity = "Medium"
 
+                manufacturer = event.get('manufacturer', {}).get('name', ['Not specified'])[0]
+                manufacturers.add(manufacturer)
+
                 data.append({
                     "Event ID": event['event_key'],
                     "Date of Event": event.get('date_of_event', 'Not specified'),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                     "Event Type": ', '.join(event_types),
                     "Severity": severity,
-                    "Manufacturer": event.get('manufacturer', {}).get('name', ['Not specified'])[0],
+                    "Manufacturer": manufacturer,
                     "Brand Name": event.get('device', [{}])[0].get('brand_name', 'Not specified'),
                     "Generic Name": event.get('device', [{}])[0].get('generic_name', 'Not specified')
                 })
             
             df = pd.DataFrame(data)
-            
+
+            # Add manufacturer filter
+            manufacturer_options = ["All"] + list(manufacturers)
+            selected_manufacturer = st.selectbox("Filter by manufacturer:", manufacturer_options)
+
+            # Apply filters
+            if selected_severity != "All":
+                df = df[df["Severity"] == selected_severity]
+            if selected_manufacturer != "All":
+                df = df[df["Manufacturer"] == selected_manufacturer]
+
             # Color-code severity
             def color_severity(val):
                 if val == "High":
@@ -160,7 +178,7 @@ if st.button("Get Device Events"):
             st.download_button(
                 label="Download data as CSV",
                 data=csv,
-                file_name=f"{selected_modality}_events.csv",
+                file_name=f"{selected_modality}_events_filtered.csv",
                 mime="text/csv",
             )
         else:
