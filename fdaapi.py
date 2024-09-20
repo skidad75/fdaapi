@@ -336,8 +336,11 @@ with tab2:
 with tab3:
     st.header("Modality-specific Events")
 
-    # Fetch and cache modalities with adverse events (keep limit at 100 for the dropdown)
+    # Fetch and cache modalities with adverse events
     modalities = get_modalities_with_events(100)
+
+    # Add a default option to the modalities list
+    modalities = ["Select a modality..."] + modalities
 
     # Create modality dropdown
     selected_modality = st.selectbox("Select modality:", modalities)
@@ -350,7 +353,7 @@ with tab3:
     selected_severity = st.selectbox("Filter by severity:", severity_options)
 
     if st.button("Get Device Events"):
-        if selected_modality:
+        if selected_modality and selected_modality != "Select a modality...":
             with st.spinner("Fetching device events..."):
                 events = get_device_events(selected_modality, limit)
             if events and 'results' in events and events['results']:
@@ -388,6 +391,7 @@ with tab3:
                 if selected_severity != "All":
                     df = df[df["Severity"] == selected_severity]
 
+                # Display the DataFrame using AgGrid
                 gb = GridOptionsBuilder.from_dataframe(df)
                 gb.configure_pagination(paginationAutoPageSize=True)
                 gb.configure_side_bar()
