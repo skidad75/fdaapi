@@ -121,18 +121,39 @@ if st.button("Get Device Events"):
         if 'results' in events and events['results']:
             data = []
             for event in events['results']:
+                # Determine severity based on event type
+                severity = "Low"
+                event_types = event.get('event_type', [])
+                if "Death" in event_types:
+                    severity = "High"
+                elif "Injury" in event_types or "Malfunction" in event_types:
+                    severity = "Medium"
+
                 data.append({
                     "Event ID": event['event_key'],
                     "Date of Event": event.get('date_of_event', 'Not specified'),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
-                    "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
+                    "Event Type": ', '.join(event_types),
+                    "Severity": severity,
                     "Manufacturer": event.get('manufacturer', {}).get('name', ['Not specified'])[0],
                     "Brand Name": event.get('device', [{}])[0].get('brand_name', 'Not specified'),
                     "Generic Name": event.get('device', [{}])[0].get('generic_name', 'Not specified')
                 })
             
             df = pd.DataFrame(data)
-            st.dataframe(df, use_container_width=True)
+            
+            # Color-code severity
+            def color_severity(val):
+                if val == "High":
+                    return 'background-color: #FFCCCB'
+                elif val == "Medium":
+                    return 'background-color: #FFFFA1'
+                else:
+                    return 'background-color: #90EE90'
+
+            styled_df = df.style.applymap(color_severity, subset=['Severity'])
+            
+            st.dataframe(styled_df, use_container_width=True)
             
             # Add download button for CSV
             csv = df.to_csv(index=False)
