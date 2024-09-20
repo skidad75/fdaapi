@@ -185,6 +185,14 @@ def get_manufacturer_details(manufacturer, limit=100):
         st.error("Failed to parse the API response as JSON.")
         return {}
 
+def parse_date(date_string):
+    if pd.isna(date_string):
+        return pd.NaT
+    try:
+        return pd.to_datetime(date_string)
+    except ValueError:
+        return pd.NaT
+
 st.title("FDA Device Adverse Events")
 
 # Create tabs for different features
@@ -220,6 +228,7 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
+            df['Date of Event'] = df['Date of Event'].apply(parse_date)
             st.dataframe(df, use_container_width=True)
             
             # Add download button for CSV
@@ -286,6 +295,7 @@ with tab2:
                     })
                 
                 df = pd.DataFrame(data)
+                df['Date of Event'] = df['Date of Event'].apply(parse_date)
 
                 # Apply severity filter
                 if selected_severity != "All":
@@ -375,6 +385,7 @@ with tab3:
                     })
                 
                 df = pd.DataFrame(data)
+                df['Date of Event'] = df['Date of Event'].apply(parse_date)
 
                 # Apply severity filter
                 if selected_severity != "All":
