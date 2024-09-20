@@ -250,10 +250,10 @@ with tab2:
     
     # Fetch manufacturers with adverse events
     manufacturers = get_manufacturer_events()
-    manufacturer_names = [item['term'] for item in manufacturers]
+    manufacturer_names = ["Select a manufacturer..."] + [item['term'] for item in manufacturers]
     
-    # Create manufacturer dropdown with search functionality
-    selected_manufacturer = st.selectbox("Select manufacturer:", manufacturer_names, index=None, placeholder="Search for a manufacturer...")
+    # Create manufacturer dropdown
+    selected_manufacturer = st.selectbox("Select manufacturer:", manufacturer_names)
     
     limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=1000, value=10, key="manufacturer_limit")
     
@@ -262,7 +262,7 @@ with tab2:
     selected_severity = st.selectbox("Filter by severity:", severity_options, key="manufacturer_severity")
     
     if st.button("Get Manufacturer Events"):
-        if selected_manufacturer:
+        if selected_manufacturer and selected_manufacturer != "Select a manufacturer...":
             with st.spinner("Fetching manufacturer events..."):
                 events = get_manufacturer_details(selected_manufacturer, limit)
             if 'results' in events and events['results']:
