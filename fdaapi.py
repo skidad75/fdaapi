@@ -187,11 +187,11 @@ def get_manufacturer_details(manufacturer, limit=100):
 
 def parse_date(date_string):
     if pd.isna(date_string):
-        return pd.NaT
+        return ''
     try:
-        return pd.to_datetime(date_string)
+        return pd.to_datetime(date_string).strftime('%Y-%m-%d %H:%M:%S')
     except ValueError:
-        return pd.NaT
+        return ''
 
 st.title("FDA Device Adverse Events")
 
@@ -220,7 +220,7 @@ with tab1:
                 generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                 data.append({
-                    "Date of Event": event.get('date_of_event', 'Not specified'),
+                    "Date of Event": parse_date(event.get('date_of_event', '')),
                     "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                     "Event Type": ', '.join(event.get('event_type', ['Not specified'])),
                     "Brand Name": brand_name,
@@ -228,7 +228,6 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
-            df['Date of Event'] = df['Date of Event'].apply(parse_date)
             st.dataframe(df, use_container_width=True)
             
             # Add download button for CSV
@@ -286,7 +285,7 @@ with tab2:
                     modalities.add(generic_name)
 
                     data.append({
-                        "Date of Event": event.get('date_of_event', 'Not specified'),
+                        "Date of Event": parse_date(event.get('date_of_event', '')),
                         "Brand Name": brand_name,
                         "Generic Name (Modality)": generic_name,
                         "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
@@ -295,7 +294,6 @@ with tab2:
                     })
                 
                 df = pd.DataFrame(data)
-                df['Date of Event'] = df['Date of Event'].apply(parse_date)
 
                 # Apply severity filter
                 if selected_severity != "All":
@@ -376,7 +374,7 @@ with tab3:
                     generic_name = generic_name[0] if isinstance(generic_name, list) else generic_name
 
                     data.append({
-                        "Date of Event": event.get('date_of_event', 'Not specified'),
+                        "Date of Event": parse_date(event.get('date_of_event', '')),
                         "Product Problems": ', '.join(event.get('product_problems', ['Not specified'])),
                         "Event Type": ', '.join(event_types),
                         "Severity": severity,
@@ -385,7 +383,6 @@ with tab3:
                     })
                 
                 df = pd.DataFrame(data)
-                df['Date of Event'] = df['Date of Event'].apply(parse_date)
 
                 # Apply severity filter
                 if selected_severity != "All":
