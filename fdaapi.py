@@ -243,7 +243,7 @@ with tab2:
     # Create manufacturer dropdown with search functionality
     selected_manufacturer = st.selectbox("Select manufacturer:", manufacturer_names, index=None, placeholder="Search for a manufacturer...")
     
-    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=100, value=10, key="manufacturer_limit")
+    limit = st.number_input("Number of events to retrieve:", min_value=1, max_value=1000, value=10, key="manufacturer_limit")
     
     # Add severity filter
     severity_options = ["All", "High", "Medium", "Low"]
@@ -253,7 +253,7 @@ with tab2:
         if selected_manufacturer:
             with st.spinner("Fetching manufacturer events..."):
                 events = get_manufacturer_details(selected_manufacturer, limit)
-            if events and 'results' in events and events['results']:
+            if 'results' in events and events['results']:
                 data = []
                 modalities = set()
                 for event in events['results']:
@@ -294,6 +294,8 @@ with tab2:
                 # Add modality filter
                 modality_options = ["All"] + list(modalities)
                 selected_modality = st.selectbox("Filter by modality:", modality_options)
+                
+                # Apply modality filter
                 if selected_modality != "All":
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
@@ -319,10 +321,7 @@ with tab2:
                     mime="text/csv",
                 )
             else:
-                if not events:
-                    st.warning("Failed to retrieve events. Please check the error messages above.")
-                else:
-                    st.warning(f"No events found for the specified manufacturer: {selected_manufacturer}")
+                st.warning(f"No events found for the specified manufacturer.")
         else:
             st.warning("Please select a manufacturer.")
 
