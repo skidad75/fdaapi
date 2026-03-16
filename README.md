@@ -37,6 +37,17 @@ This Streamlit application provides an interactive interface to explore and anal
 
 Run the Streamlit app:
 
+```
+streamlit run fdaapi.py
+```
+
+## Configuration (Recommended)
+
+This app can run without an API key, but openFDA enforces a much lower daily limit without one.
+
+- Local: set `FDA_API_KEY` in your shell environment (or via your preferred `.env` tooling)
+- Streamlit Cloud: set `FDA_API_KEY` in the app's Secrets
+
 ## Support the Project
 
 If you find this tool useful and would like to support its development and maintenance, consider buying me a coffee!

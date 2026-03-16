@@ -2,12 +2,53 @@ import streamlit as st
 import requests
 import pandas as pd
 import time
+import os
 from datetime import datetime, timedelta
-from st_aggrid import AgGrid, GridOptionsBuilder
+from typing import Optional, Any
+
+try:
+    from st_aggrid import AgGrid, GridOptionsBuilder
+except Exception:
+    AgGrid = None
+    GridOptionsBuilder = None
+
+
+def with_api_key(params: dict) -> dict:
+    """Attach FDA API key if available via env/secrets."""
+    api_key = get_api_key()
+    if api_key:
+        params["api_key"] = api_key
+    return params
+
+
+def get_api_key() -> str:
+    return os.getenv("FDA_API_KEY") or st.secrets.get("FDA_API_KEY", "")
+
+
+def has_api_key() -> bool:
+    return bool(get_api_key())
+
+
+def render_table(df: Any, grid_options: Optional[dict] = None) -> None:
+    """Render a DataFrame; prefer AgGrid, fall back to st.dataframe."""
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(df)
+
+    if AgGrid is not None and grid_options is not None:
+        try:
+            AgGrid(df, gridOptions=grid_options, enable_enterprise_modules=True)
+            return
+        except Exception:
+            # Most common on Streamlit Cloud: streamlit-aggrid vs pandas mismatch.
+            st.warning("Interactive grid failed to load here; showing a basic table instead.")
+
+    st.dataframe(df, use_container_width=True)
 
 # Global variables for rate limiting
+# https://open.fda.gov/apis/authentication/
 REQUESTS_PER_MINUTE = 240
-REQUESTS_PER_DAY = 120000
+REQUESTS_PER_DAY_WITH_KEY = 120000
+REQUESTS_PER_DAY_NO_KEY = 1000
 last_request_time = time.time()
 daily_request_count = 0
 last_reset_date = datetime.now().date()
@@ -17,13 +58,15 @@ def check_rate_limit():
     current_time = time.time()
     current_date = datetime.now().date()
 
+    daily_limit = REQUESTS_PER_DAY_WITH_KEY if has_api_key() else REQUESTS_PER_DAY_NO_KEY
+
     # Reset daily count if it's a new day
     if current_date > last_reset_date:
         daily_request_count = 0
         last_reset_date = current_date
 
     # Check if we've exceeded daily limit
-    if daily_request_count >= REQUESTS_PER_DAY:
+    if daily_request_count >= daily_limit:
         st.error("Daily API request limit reached. Please try again tomorrow.")
         return False
 
@@ -41,11 +84,7 @@ def get_api_data(field, limit=10):
         return []
 
     url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "count": field,
-        "limit": limit
-    }
+    params = with_api_key({"count": field, "limit": limit})
     
     response = requests.get(url, params=params)
     
@@ -66,11 +105,7 @@ def get_modalities_with_events(limit=100):
         return []
 
     url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "count": "device.generic_name.exact",
-        "limit": limit
-    }
+    params = with_api_key({"count": "device.generic_name.exact", "limit": limit})
     
     response = requests.get(url, params=params)
     
@@ -91,11 +126,7 @@ def get_high_severity_events(limit=100):
         return []
 
     url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": "event_type:death",
-        "limit": limit
-    }
+    params = with_api_key({"search": "event_type:death", "limit": limit})
     
     response = requests.get(url, params=params)
     
@@ -116,18 +147,20 @@ def get_device_events(modality, limit=10):
 
     url = "https://api.fda.gov/device/event.json"
     
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": f"device.generic_name:'{modality}'",
-        "limit": min(limit, 1000)  # Ensure limit doesn't exceed 1000
-    }
+    params = with_api_key(
+        {
+            "search": f"device.generic_name:'{modality}'",
+            "limit": min(limit, 1000),  # Ensure limit doesn't exceed 1000
+        }
+    )
 
+    response = None
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         st.error(f"API request failed: {str(e)}")
-        if response.status_code == 500:
+        if response is not None and getattr(response, "status_code", None) == 500:
             st.error("The FDA server encountered an internal error. This might be due to temporary issues or maintenance. Please try again later or with a smaller number of events.")
         return {}
     
@@ -139,11 +172,7 @@ def get_manufacturer_events(limit=100):
         return []
 
     url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "count": "device.manufacturer_d_name.exact",
-        "limit": limit
-    }
+    params = with_api_key({"count": "device.manufacturer_d_name.exact", "limit": limit})
     
     response = requests.get(url, params=params)
     
@@ -163,20 +192,17 @@ def get_manufacturer_details(manufacturer, limit=100):
         return {}
 
     url = "https://api.fda.gov/device/event.json"
-    params = {
-        "api_key": "FmMZcDlQm1SHtM2uXegetgdRueXrulaWS1liIegh",
-        "search": f"device.manufacturer_d_name:'{manufacturer}'",
-        "limit": limit
-    }
+    params = with_api_key({"search": f"device.manufacturer_d_name:'{manufacturer}'", "limit": limit})
 
+    response = None
     try:
         response = requests.get(url, params=params)
         response.raise_for_status()  # This will raise an exception for HTTP errors
     except requests.exceptions.RequestException as e:
         st.error(f"API request failed: {str(e)}")
-        if response.status_code == 500:
+        if response is not None and getattr(response, "status_code", None) == 500:
             st.error("The FDA server encountered an internal error. This might be due to temporary issues or maintenance. Please try again later.")
-        elif response.status_code == 400:
+        elif response is not None and getattr(response, "status_code", None) == 400:
             st.error("The request was invalid. This might be due to an issue with the manufacturer name format.")
         return {}
     
@@ -226,15 +252,24 @@ with tab1:
                 })
             
             df = pd.DataFrame(data)
-            gb = GridOptionsBuilder.from_dataframe(df)
-            gb.configure_pagination(paginationAutoPageSize=True)
-            gb.configure_side_bar()
-            gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
-            gridOptions = gb.build()
+            gridOptions = None
+            if GridOptionsBuilder is not None:
+                gb = GridOptionsBuilder.from_dataframe(df)
+                gb.configure_pagination(paginationAutoPageSize=True)
+                gb.configure_side_bar()
+                gb.configure_default_column(
+                    groupable=True,
+                    value=True,
+                    enableRowGroup=True,
+                    aggFunc="sum",
+                    editable=True,
+                )
+                gridOptions = gb.build()
 
-            AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
-            
+            render_table(df, gridOptions)
+             
             # Add download button for CSV
+            df = pd.DataFrame(df)
             csv = df.to_csv(index=False)
             st.download_button(
                 label="Download high severity events as CSV",
@@ -312,15 +347,24 @@ with tab2:
                     df = df[df["Generic Name (Modality)"] == selected_modality]
 
                 # Display the DataFrame using AgGrid
-                gb = GridOptionsBuilder.from_dataframe(df)
-                gb.configure_pagination(paginationAutoPageSize=True)
-                gb.configure_side_bar()
-                gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
-                gridOptions = gb.build()
+                gridOptions = None
+                if GridOptionsBuilder is not None:
+                    gb = GridOptionsBuilder.from_dataframe(df)
+                    gb.configure_pagination(paginationAutoPageSize=True)
+                    gb.configure_side_bar()
+                    gb.configure_default_column(
+                        groupable=True,
+                        value=True,
+                        enableRowGroup=True,
+                        aggFunc="sum",
+                        editable=True,
+                    )
+                    gridOptions = gb.build()
 
-                AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
-                
+                render_table(df, gridOptions)
+                 
                 # Add download button for CSV
+                df = pd.DataFrame(df)
                 csv = df.to_csv(index=False)
                 st.download_button(
                     label="Download manufacturer events as CSV",
@@ -392,15 +436,24 @@ with tab3:
                     df = df[df["Severity"] == selected_severity]
 
                 # Display the DataFrame using AgGrid
-                gb = GridOptionsBuilder.from_dataframe(df)
-                gb.configure_pagination(paginationAutoPageSize=True)
-                gb.configure_side_bar()
-                gb.configure_default_column(groupable=True, value=True, enableRowGroup=True, aggFunc="sum", editable=True)
-                gridOptions = gb.build()
+                gridOptions = None
+                if GridOptionsBuilder is not None:
+                    gb = GridOptionsBuilder.from_dataframe(df)
+                    gb.configure_pagination(paginationAutoPageSize=True)
+                    gb.configure_side_bar()
+                    gb.configure_default_column(
+                        groupable=True,
+                        value=True,
+                        enableRowGroup=True,
+                        aggFunc="sum",
+                        editable=True,
+                    )
+                    gridOptions = gb.build()
 
-                AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True)
-                
+                render_table(df, gridOptions)
+                 
                 # Add download button for CSV
+                df = pd.DataFrame(df)
                 csv = df.to_csv(index=False)
                 st.download_button(
                     label="Download data as CSV",
